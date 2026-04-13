@@ -1,7 +1,5 @@
 <?php
 session_start();
-
-
 require_once 'DBConnect.php';
 
 if (!isset($_SESSION['user_id'])) {
@@ -14,9 +12,10 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     exit;
 }
 
-$userId    = $_SESSION['user_id'];
-$mediaName = trim($_POST['media_name'] ?? '');
-$tagsInput = trim($_POST['tags'] ?? '');
+$userId      = $_SESSION['user_id'];
+$mediaName   = trim($_POST['media_name'] ?? '');
+$description = trim($_POST['description'] ?? '');
+$tagsInput   = trim($_POST['tags'] ?? '');
 
 if ($mediaName === '') {
     die("Error: Media name is required.");
@@ -28,14 +27,15 @@ if ($tagsInput === '') {
 
 $acceptStatus = 'Pending';
 
-$sql = "INSERT INTO submission (MediaName, User_ID, AcceptStatus) VALUES (?, ?, ?)";
+// Insert submission with original submitted description preserved
+$sql = "INSERT INTO submission (MediaName, SubmitDesc, User_ID, AcceptStatus) VALUES (?, ?, ?, ?)";
 $stmt = $conn->prepare($sql);
 
 if (!$stmt) {
     die("Prepare failed: " . $conn->error);
 }
 
-$stmt->bind_param("sis", $mediaName, $userId, $acceptStatus);
+$stmt->bind_param("ssis", $mediaName, $description, $userId, $acceptStatus);
 
 if (!$stmt->execute()) {
     die("Submission insert failed: " . $stmt->error);
@@ -44,7 +44,7 @@ if (!$stmt->execute()) {
 $subId = $stmt->insert_id;
 $stmt->close();
 
-
+// Process tags
 $rawTags = explode(',', $tagsInput);
 $cleanTags = [];
 
@@ -58,7 +58,6 @@ foreach ($rawTags as $tag) {
 $cleanTags = array_unique($cleanTags);
 
 foreach ($cleanTags as $tagName) {
-
     $checkSql = "SELECT Tag_ID FROM tags WHERE TagName = ?";
     $checkStmt = $conn->prepare($checkSql);
 
@@ -74,7 +73,6 @@ foreach ($cleanTags as $tagName) {
         $checkStmt->close();
     } else {
         $checkStmt->close();
-
 
         $insertTagSql = "INSERT INTO tags (TagName) VALUES (?)";
         $insertTagStmt = $conn->prepare($insertTagSql);

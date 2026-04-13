@@ -1,84 +1,197 @@
 <?php
-$title = isset($_GET['title']) ? $_GET['title'] : 'Unknown Media';
+session_start();
+require_once 'DBConnect.php';
 
-$mediaItems = [
-    [
-        'title' => 'The Hobbit',
-        'category' => 'Book',
-        'image' => 'https://upload.wikimedia.org/wikipedia/en/4/4a/TheHobbit_FirstEdition.jpg',
-        'source' => 'https://en.wikipedia.org/wiki/The_Hobbit',
-        'description' => 'A fantasy adventure following Bilbo Baggins on an unexpected journey.',
-        'tags' => ['Fantasy', 'Adventure', 'Classic'],
-        'details' => 'Bilbo Baggins is swept into an epic quest to reclaim a lost dwarf kingdom from the dragon Smaug.'
-    ],
-    [
-        'title' => 'The Matrix',
-        'category' => 'Movie',
-        'image' => 'https://upload.wikimedia.org/wikipedia/en/d/db/The_Matrix.png',
-        'source' => 'https://en.wikipedia.org/wiki/The_Matrix',
-        'description' => 'A science fiction story about reality, control, and rebellion.',
-        'tags' => ['Sci-Fi', 'Action', 'Classic'],
-        'details' => 'Neo discovers the truth about reality and his role in the war against machines.'
-    ],
-    [
-        'title' => 'Portal 2',
-        'category' => 'Video Game',
-        'image' => 'https://upload.wikimedia.org/wikipedia/en/f/f9/Portal2cover.jpg',
-        'source' => 'https://en.wikipedia.org/wiki/Portal_2',
-        'description' => 'A puzzle game built around portals, experimentation, and problem solving.',
-        'tags' => ['Puzzle', 'Sci-Fi', 'Co-op'],
-        'details' => 'Use a portal gun to solve increasingly complex test chambers in a mysterious facility.'
-    ],
-    [
-        'title' => 'Spider-Man: Into the Spider-Verse',
-        'category' => 'Movie',
-        'image' => 'https://upload.wikimedia.org/wikipedia/en/f/fa/Spider-Man_Into_the_Spider-Verse_poster.png',
-        'source' => 'https://en.wikipedia.org/wiki/Spider-Man:_Into_the_Spider-Verse',
-        'description' => 'An animated superhero film centered on Miles Morales and the multiverse.',
-        'tags' => ['Animation', 'Superhero', 'Action'],
-        'details' => 'Miles Morales becomes Spider-Man and teams up with alternate Spider-People from across the multiverse.'
-    ],
-    [
-        'title' => 'The Legend of Zelda: Breath of the Wild',
-        'category' => 'Video Game',
-        'image' => 'https://upload.wikimedia.org/wikipedia/en/c/c6/The_Legend_of_Zelda_Breath_of_the_Wild.jpg',
-        'source' => 'https://en.wikipedia.org/wiki/The_Legend_of_Zelda:_Breath_of_the_Wild',
-        'description' => 'An open-world adventure game focused on exploration, combat, and discovery.',
-        'tags' => ['Adventure', 'Open World', 'Fantasy'],
-        'details' => 'Link awakens in Hyrule and explores a vast world to recover his memories and defeat Calamity Ganon.'
-    ],
-    [
-        'title' => 'To Kill a Mockingbird',
-        'category' => 'Book',
-        'image' => 'https://upload.wikimedia.org/wikipedia/commons/4/4f/To_Kill_a_Mockingbird_%28first_edition_cover%29.jpg',
-        'source' => 'https://en.wikipedia.org/wiki/To_Kill_a_Mockingbird',
-        'description' => 'A classic novel exploring justice, morality, and human behavior.',
-        'tags' => ['Classic', 'Drama', 'Literature'],
-        'details' => 'Set in the American South, the story follows Scout Finch as she learns about prejudice, justice, and empathy.'
-    ]
-];
+if (!isset($_GET['id']) || !is_numeric($_GET['id'])) {
+    die("Invalid media page ID.");
+}
 
-$selectedItem = null;
+$pageId = (int) $_GET['id'];
+$isAdmin = isset($_SESSION['user_id']) && isset($_SESSION['usertype']) && $_SESSION['usertype'] === 'admin';
 
-foreach ($mediaItems as $item) {
-    if ($item['title'] === $title) {
-        $selectedItem = $item;
-        break;
+$message = "";
+$error = "";
+
+/*
+    ADMIN TEXT UPDATE HANDLER
+*/
+if (
+    $_SERVER['REQUEST_METHOD'] === 'POST' &&
+    $isAdmin &&
+    !isset($_POST['upload_image']) &&
+    !isset($_POST['remove_image_id'])
+) {
+    $newMediaName = trim($_POST['media_name'] ?? '');
+    $newMediaDesc = trim($_POST['media_desc'] ?? '');
+
+    if ($newMediaName === '' || $newMediaDesc === '') {
+        $error = "Media name and description cannot be empty.";
+    } else {
+        $stmt = $conn->prepare("
+            SELECT media_page.Page_ID, media_page.Sub_ID
+            FROM media_page
+            WHERE media_page.Page_ID = ?
+        ");
+        $stmt->bind_param("i", $pageId);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $pageRow = $result->fetch_assoc();
+        $stmt->close();
+
+        if (!$pageRow) {
+            $error = "Media page not found.";
+        } else {
+            $subId = (int) $pageRow['Sub_ID'];
+
+            $stmt1 = $conn->prepare("UPDATE submission SET MediaName = ? WHERE Sub_ID = ?");
+            $stmt1->bind_param("si", $newMediaName, $subId);
+
+            $stmt2 = $conn->prepare("UPDATE media_page SET MediaDesc = ? WHERE Page_ID = ?");
+            $stmt2->bind_param("si", $newMediaDesc, $pageId);
+
+            $ok1 = $stmt1->execute();
+            $ok2 = $stmt2->execute();
+
+            $stmt1->close();
+            $stmt2->close();
+
+            if ($ok1 && $ok2) {
+                $message = "Media page updated successfully.";
+            } else {
+                $error = "Failed to update media page.";
+            }
+        }
     }
 }
-?>
 
-<html>
+/*
+    ADMIN IMAGE UPLOAD HANDLER
+*/
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && $isAdmin && isset($_POST['upload_image'])) {
+    if (isset($_FILES['media_image']) && $_FILES['media_image']['error'] === UPLOAD_ERR_OK) {
+        $allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+        $fileType = mime_content_type($_FILES['media_image']['tmp_name']);
+
+        if (!in_array($fileType, $allowedTypes, true)) {
+            $error = "Only JPG, PNG, GIF, and WEBP images are allowed.";
+        } else {
+            $ext = pathinfo($_FILES['media_image']['name'], PATHINFO_EXTENSION);
+            $newFileName = 'media_' . $pageId . '_' . time() . '_' . mt_rand(1000, 9999) . '.' . $ext;
+            $targetPath = __DIR__ . '/uploads/media/' . $newFileName;
+            $dbPath = 'uploads/media/' . $newFileName;
+
+            if (move_uploaded_file($_FILES['media_image']['tmp_name'], $targetPath)) {
+                $stmt = $conn->prepare("
+                    INSERT INTO media_images (Page_ID, ImagePath)
+                    VALUES (?, ?)
+                ");
+                $stmt->bind_param("is", $pageId, $dbPath);
+
+                if ($stmt->execute()) {
+                    $message = "Image uploaded successfully.";
+                } else {
+                    $error = "Failed to save image record.";
+                }
+
+                $stmt->close();
+            } else {
+                $error = "Failed to upload image.";
+            }
+        }
+    } else {
+        $error = "Please choose an image to upload.";
+    }
+}
+
+/*
+    ADMIN IMAGE REMOVE HANDLER
+*/
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && $isAdmin && isset($_POST['remove_image_id'])) {
+    $imageId = (int) $_POST['remove_image_id'];
+
+    $stmt = $conn->prepare("
+        SELECT Image_ID, ImagePath
+        FROM media_images
+        WHERE Image_ID = ? AND Page_ID = ?
+    ");
+    $stmt->bind_param("ii", $imageId, $pageId);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $imageRow = $result->fetch_assoc();
+    $stmt->close();
+
+    if ($imageRow) {
+        $stmt = $conn->prepare("
+            DELETE FROM media_images
+            WHERE Image_ID = ? AND Page_ID = ?
+        ");
+        $stmt->bind_param("ii", $imageId, $pageId);
+
+        if ($stmt->execute()) {
+            $fullPath = __DIR__ . '/' . $imageRow['ImagePath'];
+            if (file_exists($fullPath)) {
+                unlink($fullPath);
+            }
+            $message = "Image removed successfully.";
+        } else {
+            $error = "Failed to remove image.";
+        }
+
+        $stmt->close();
+    } else {
+        $error = "Image not found.";
+    }
+}
+
+/*
+    LOAD PAGE DATA
+*/
+$stmt = $conn->prepare("
+    SELECT media_page.Page_ID, media_page.Sub_ID, media_page.MediaDesc, submission.MediaName
+    FROM media_page
+    INNER JOIN submission ON media_page.Sub_ID = submission.Sub_ID
+    WHERE media_page.Page_ID = ?
+");
+$stmt->bind_param("i", $pageId);
+$stmt->execute();
+$result = $stmt->get_result();
+$media = $result->fetch_assoc();
+$stmt->close();
+
+if (!$media) {
+    die("Media page not found.");
+}
+
+/*
+    LOAD IMAGES
+*/
+$images = [];
+$stmt = $conn->prepare("
+    SELECT Image_ID, ImagePath
+    FROM media_images
+    WHERE Page_ID = ?
+    ORDER BY Image_ID ASC
+");
+$stmt->bind_param("i", $pageId);
+$stmt->execute();
+$result = $stmt->get_result();
+
+while ($row = $result->fetch_assoc()) {
+    $images[] = $row;
+}
+$stmt->close();
+?>
+<!DOCTYPE html>
+<html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Media Details</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Media Details - Media Archive</title>
 
     <link rel="stylesheet" href="https://www.w3schools.com/w3css/5/w3.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="mystyles.css">
-
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </head>
 <body>
@@ -87,54 +200,98 @@ foreach ($mediaItems as $item) {
 
 <main class="container mt-4">
 
-    <?php if ($selectedItem): ?>
-        <div class="oc-callout w3-card-4">
-            <h1 class="h3 mb-3"><?php echo htmlspecialchars($selectedItem['title']); ?></h1>
+    <div class="oc-callout w3-card-4">
+        <h1 class="h3 mb-3"><?php echo htmlspecialchars($media['MediaName']); ?></h1>
 
-            <p><strong>Category:</strong> <?php echo htmlspecialchars($selectedItem['category']); ?></p>
+        <?php if ($message !== ''): ?>
+            <div class="alert alert-success"><?php echo htmlspecialchars($message); ?></div>
+        <?php endif; ?>
 
-            <!-- IMAGE + SOURCE -->
-            <div class="mb-4 text-center">
-                <a href="<?php echo htmlspecialchars($selectedItem['source']); ?>" target="_blank">
-                    <img
-                        src="<?php echo htmlspecialchars($selectedItem['image']); ?>"
-                        alt="<?php echo htmlspecialchars($selectedItem['title']); ?>"
-                        class="img-fluid rounded media-detail-image"
-                    >
-                </a>
+        <?php if ($error !== ''): ?>
+            <div class="alert alert-danger"><?php echo htmlspecialchars($error); ?></div>
+        <?php endif; ?>
 
-                <div class="mt-2">
-                    <a href="<?php echo htmlspecialchars($selectedItem['source']); ?>" target="_blank" class="text-light">
-                        View Source
-                    </a>
+        <?php if (!empty($images)): ?>
+            <div class="mb-4">
+                <h2 class="h5 mb-3">Images</h2>
+                <div class="row">
+                    <?php foreach ($images as $img): ?>
+                        <div class="col-md-4 mb-4 text-center">
+                            <img
+                                src="<?php echo htmlspecialchars($img['ImagePath']); ?>"
+                                alt="Media Image"
+                                class="img-fluid rounded media-detail-image"
+                            >
+
+                            <?php if ($isAdmin): ?>
+                                <form method="post" class="mt-2">
+                                    <input type="hidden" name="remove_image_id" value="<?php echo htmlspecialchars($img['Image_ID']); ?>">
+                                    <button type="submit" class="btn btn-danger btn-sm">
+                                        Remove Image
+                                    </button>
+                                </form>
+                            <?php endif; ?>
+                        </div>
+                    <?php endforeach; ?>
                 </div>
             </div>
+        <?php endif; ?>
 
-            <p><strong>Description:</strong><br>
-                <?php echo htmlspecialchars($selectedItem['description']); ?>
-            </p>
+        <p><strong>Page ID:</strong> <?php echo htmlspecialchars($media['Page_ID']); ?></p>
+        <p><strong>Description:</strong><br>
+            <?php echo nl2br(htmlspecialchars($media['MediaDesc'])); ?>
+        </p>
 
-            <p><strong>Details:</strong><br>
-                <?php echo htmlspecialchars($selectedItem['details']); ?>
-            </p>
+        <a href="media.php" class="btn btn-warning">Back to Media</a>
+    </div>
 
-            <p><strong>Tags:</strong></p>
-            <div class="mb-3">
-                <?php foreach ($selectedItem['tags'] as $tag): ?>
-                    <span class="badge bg-secondary me-1 mb-1">
-                        <?php echo htmlspecialchars($tag); ?>
-                    </span>
-                <?php endforeach; ?>
-            </div>
+    <?php if ($isAdmin): ?>
+        <div class="oc-callout w3-card-4 mt-4">
+            <h2 class="h4 mb-3">Admin Edit Panel</h2>
 
-            <a href="media.php" class="btn btn-warning">Back to Media</a>
-        </div>
+            <form method="post" action="media_details.php?id=<?php echo urlencode($media['Page_ID']); ?>" enctype="multipart/form-data">
+                <div class="mb-3">
+                    <label for="media_name" class="form-label">Media Name</label>
+                    <input
+                        type="text"
+                        class="form-control"
+                        id="media_name"
+                        name="media_name"
+                        value="<?php echo htmlspecialchars($media['MediaName']); ?>"
+                        required
+                    >
+                </div>
 
-    <?php else: ?>
-        <div class="oc-callout w3-card-4">
-            <h2 class="h4">Media Not Found</h2>
-            <p>The requested media item could not be found.</p>
-            <a href="media.php" class="btn btn-warning">Back to Media</a>
+                <div class="mb-3">
+                    <label for="media_desc" class="form-label">Description</label>
+                    <textarea
+                        class="form-control"
+                        id="media_desc"
+                        name="media_desc"
+                        rows="6"
+                        required
+                    ><?php echo htmlspecialchars($media['MediaDesc']); ?></textarea>
+                </div>
+
+                <button type="submit" class="btn btn-warning me-2">Save Changes</button>
+
+                <hr class="my-4">
+
+                <div class="mb-3">
+                    <label for="media_image" class="form-label">Upload Image</label>
+                    <input
+                        type="file"
+                        class="form-control"
+                        id="media_image"
+                        name="media_image"
+                        accept=".jpg,.jpeg,.png,.gif,.webp"
+                    >
+                </div>
+
+                <button type="submit" name="upload_image" value="1" class="btn btn-outline-light">
+                    Upload Image
+                </button>
+            </form>
         </div>
     <?php endif; ?>
 
