@@ -165,3 +165,40 @@ footer p {
     border: 2px solid rgba(255, 255, 255, 0.12);
     box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
 }
+
+.profile-page-image {
+    width: 150px;
+    height: 110px;
+    object-fit: cover;
+    border: 2px solid rgba(255, 255, 255, 0.2);
+}
+
+.profile-page-placeholder {
+    width: 150px;
+    height: 110px;
+    background: #333;
+    color: #ccc;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+}
+
+.profile-bio-box {
+    max-width: 500px;
+}
+
+.accepted-submissions-box {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: yellow;
+    font-size: 1.25rem;
+    font-weight: bold;
+    line-height: 1.1;
+}
+
+.accepted-star {
+    font-size: 3.5rem;
+    line-height: 1;
+}
