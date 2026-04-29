@@ -3,7 +3,7 @@ session_start();
 
 // Redirect if already logged in
 if (isset($_SESSION['user_id'])) {
-    header("Location: index.php");
+    header("Location: dashboard.php");
     exit();
 }
 
@@ -25,12 +25,11 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     } elseif ($password !== $confirm) {
         $error = "Passwords do not match.";
     } else {
-        $conn = new mysqli("localhost", "root", "", "media_archive");
+        $conn = new mysqli("localhost", "root", "", "csc_project");
 
         if ($conn->connect_error) {
             $error = "Database connection failed.";
         } else {
-            // Check if username already exists
             $stmt = $conn->prepare("SELECT user_id FROM user WHERE username = ?");
             $stmt->bind_param("s", $username);
             $stmt->execute();
@@ -41,14 +40,13 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             } else {
                 $stmt->close();
 
-                // Insert new user
                 $hashed   = password_hash($password, PASSWORD_DEFAULT);
                 $usertype = "standard";
                 $status   = "active";
                 $flair    = "";
 
                 $stmt = $conn->prepare(
-                    "INSERT INTO user (username, usertype, account_status, FlairTags, password_hash, password_hint)
+                    "INSERT INTO user (username, usertype, account_status, FlairTags, password_hash, hint_question)
                      VALUES (?, ?, ?, ?, ?, ?)"
                 );
                 $stmt->bind_param("ssssss", $username, $usertype, $status, $flair, $hashed, $hint);
@@ -75,7 +73,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     <title>Sign Up – Media Archive</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
-
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background: #1a1a2e;
@@ -84,7 +81,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             align-items: center;
             justify-content: center;
         }
-
         .card {
             background: #16213e;
             border-radius: 12px;
@@ -94,107 +90,28 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             box-shadow: 0 8px 32px rgba(0,0,0,0.4);
             border: 1px solid #0f3460;
         }
-
-        .logo {
-            text-align: center;
-            margin-bottom: 28px;
+        .logo { text-align: center; margin-bottom: 28px; }
+        .logo h1 { color: #e94560; font-size: 26px; letter-spacing: 1px; }
+        .logo p { color: #a8a8b3; font-size: 13px; margin-top: 4px; }
+        label { display: block; color: #a8a8b3; font-size: 13px; margin-bottom: 6px; margin-top: 18px; }
+        input[type="text"], input[type="password"] {
+            width: 100%; padding: 11px 14px; border-radius: 8px;
+            border: 1px solid #0f3460; background: #1a1a2e;
+            color: #eaeaea; font-size: 15px; transition: border-color 0.2s;
         }
-
-        .logo h1 {
-            color: #e94560;
-            font-size: 26px;
-            letter-spacing: 1px;
-        }
-
-        .logo p {
-            color: #a8a8b3;
-            font-size: 13px;
-            margin-top: 4px;
-        }
-
-        label {
-            display: block;
-            color: #a8a8b3;
-            font-size: 13px;
-            margin-bottom: 6px;
-            margin-top: 18px;
-        }
-
-        input[type="text"],
-        input[type="password"] {
-            width: 100%;
-            padding: 11px 14px;
-            border-radius: 8px;
-            border: 1px solid #0f3460;
-            background: #1a1a2e;
-            color: #eaeaea;
-            font-size: 15px;
-            transition: border-color 0.2s;
-        }
-
-        input:focus {
-            outline: none;
-            border-color: #e94560;
-        }
-
-        .helper {
-            color: #6b6b80;
-            font-size: 12px;
-            margin-top: 5px;
-        }
-
-        .alert {
-            border-radius: 8px;
-            padding: 10px 14px;
-            font-size: 13px;
-            margin-top: 16px;
-        }
-
-        .alert.error {
-            background: rgba(233, 69, 96, 0.15);
-            border: 1px solid #e94560;
-            color: #e94560;
-        }
-
-        .alert.success {
-            background: rgba(39, 174, 96, 0.15);
-            border: 1px solid #27ae60;
-            color: #27ae60;
-        }
-
-        .btn {
-            width: 100%;
-            padding: 12px;
-            margin-top: 26px;
-            background: #e94560;
-            color: #fff;
-            border: none;
-            border-radius: 8px;
-            font-size: 15px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: background 0.2s;
-        }
-
+        input:focus { outline: none; border-color: #e94560; }
+        .helper { color: #6b6b80; font-size: 12px; margin-top: 5px; }
+        .alert { border-radius: 8px; padding: 10px 14px; font-size: 13px; margin-top: 16px; }
+        .alert.error { background: rgba(233,69,96,0.15); border: 1px solid #e94560; color: #e94560; }
+        .alert.success { background: rgba(39,174,96,0.15); border: 1px solid #27ae60; color: #27ae60; }
+        .btn { width: 100%; padding: 12px; margin-top: 26px; background: #e94560; color: #fff; border: none; border-radius: 8px; font-size: 15px; font-weight: 600; cursor: pointer; transition: background 0.2s; }
         .btn:hover { background: #c73652; }
-
-        .links {
-            margin-top: 20px;
-            text-align: center;
-            font-size: 13px;
-        }
-
-        .links a {
-            color: #a8a8b3;
-            text-decoration: none;
-            transition: color 0.2s;
-        }
-
+        .links { margin-top: 20px; text-align: center; font-size: 13px; }
+        .links a { color: #a8a8b3; text-decoration: none; transition: color 0.2s; }
         .links a:hover { color: #e94560; }
     </style>
 </head>
 <body>
-
 <div class="card">
     <div class="logo">
         <h1>Media Archive</h1>
@@ -211,7 +128,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
     <?php if ($success === ""): ?>
     <form method="POST" action="signup.php">
-
         <label for="username">Username <span style="color:#e94560">*</span></label>
         <input type="text" id="username" name="username"
                value="<?= htmlspecialchars($_POST['username'] ?? '') ?>"
@@ -239,6 +155,5 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         <a href="login.php">← Already have an account? Sign in</a>
     </div>
 </div>
-
 </body>
 </html>
