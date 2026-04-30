@@ -5,6 +5,9 @@ if (!isset($_SESSION['user_id'])) {
     header("Location: login.php");
     exit();
 }
+ 
+$usertype = $_SESSION['usertype'] ?? '';
+$isAdminOrMod = ($usertype === 'admin' || $usertype === 'moderator');
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -54,6 +57,20 @@ if (!isset($_SESSION['user_id'])) {
             text-decoration: none;
         }
         .nav-right a:hover { text-decoration: underline; }
+        .nav-admin-link {
+            background: rgba(200,169,110,0.1);
+            border: 1px solid var(--accent);
+            color: var(--accent);
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            text-decoration: none;
+            transition: background 0.2s;
+        }
+        .nav-admin-link:hover {
+            background: rgba(200,169,110,0.25);
+            text-decoration: none !important;
+        }
         .container {
             max-width: 900px;
             margin: 60px auto;
@@ -71,10 +88,18 @@ if (!isset($_SESSION['user_id'])) {
             font-size: 0.95rem;
             margin-bottom: 48px;
         }
+        .section-label {
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--muted);
+            margin-bottom: 16px;
+        }
         .cards {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
             gap: 20px;
+            margin-bottom: 40px;
         }
         .card {
             background: var(--surface);
@@ -84,41 +109,80 @@ if (!isset($_SESSION['user_id'])) {
             text-align: center;
             cursor: pointer;
             transition: border-color 0.2s;
+            text-decoration: none;
+            display: block;
         }
         .card:hover { border-color: var(--accent); }
         .card .icon { font-size: 2rem; margin-bottom: 12px; }
         .card h3 { font-size: 1rem; color: var(--text); margin-bottom: 6px; }
         .card p { font-size: 0.85rem; color: var(--muted); }
+        .card.admin-card {
+            border-color: rgba(200,169,110,0.3);
+            background: rgba(200,169,110,0.05);
+        }
+        .card.admin-card:hover { border-color: var(--accent); }
+        .divider {
+            border: none;
+            border-top: 1px solid var(--border);
+            margin-bottom: 32px;
+        }
     </style>
 </head>
 <body>
 <div class="navbar">
     <div class="logo">🎬 MediaArchive</div>
     <div class="nav-right">
-        <span>👤 <?= htmlspecialchars($_SESSION['username']) ?></span>
+        <?php if ($isAdminOrMod): ?>
+            <a href="members.php" class="nav-admin-link">👥 Members</a>
+            <a href="comment_moderation.php" class="nav-admin-link">🗂 Moderation</a>
+        <?php endif; ?>
+        <span>👤 <?= htmlspecialchars($_SESSION['username']) ?> (<?= htmlspecialchars($usertype) ?>)</span>
         <a href="logout.php">Log out</a>
     </div>
 </div>
+ 
 <div class="container">
     <h1 class="welcome">Welcome back, <span><?= htmlspecialchars($_SESSION['username']) ?></span>!</h1>
     <p class="subtitle">You're logged in to MediaArchive. More features coming soon.</p>
+ 
+    <!-- Regular cards visible to everyone -->
+    <div class="section-label">General</div>
     <div class="cards">
-        <div class="card" onclick="window.location='media.php'">
+        <a class="card" href="media.php">
             <div class="icon">🎬</div>
             <h3>Browse Media</h3>
             <p>Explore the archive collection.</p>
-        </div>
-        <div class="card">
+        </a>
+        <a class="card" href="#">
             <div class="icon">📁</div>
             <h3>My Submissions</h3>
             <p>View and manage your uploads.</p>
-        </div>
-        <div class="card">
+        </a>
+        <a class="card" href="#">
             <div class="icon">⚙️</div>
             <h3>Account Settings</h3>
             <p>Update your profile and preferences.</p>
-        </div>
+        </a>
     </div>
+ 
+    <!-- Admin/Mod only cards -->
+    <?php if ($isAdminOrMod): ?>
+    <hr class="divider">
+    <div class="section-label">Admin Panel</div>
+    <div class="cards">
+        <a class="card admin-card" href="members.php">
+            <div class="icon">👥</div>
+            <h3>Members</h3>
+            <p>View and manage all site members.</p>
+        </a>
+        <a class="card admin-card" href="comment_moderation.php">
+            <div class="icon">🗂</div>
+            <h3>Comment Moderation</h3>
+            <p>Review and delete user comments.</p>
+        </a>
+    </div>
+    <?php endif; ?>
+ 
 </div>
 </body>
 </html>
