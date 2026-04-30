@@ -1,12 +1,13 @@
 <?php
 session_start();
-
+$conn = new mysqli("localhost", "root", "", "csc_project");
+ 
 $error = "";
-
+ 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $username = trim($_POST['username']);
     $password = $_POST['password'];
-
+ 
     if (empty($username) || empty($password)) {
         $error = "Please fill in all fields.";
     } else {
@@ -15,10 +16,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $stmt->bind_param("s", $username);
         $stmt->execute();
         $result = $stmt->get_result();
-
+ 
         if ($result->num_rows === 1) {
             $user = $result->fetch_assoc();
-
+ 
             if ($user['account_status'] !== 'active') {
                 $error = "Your account is not active. Please contact an administrator.";
             } elseif (password_verify($password, $user['password_hash'])) {
@@ -26,8 +27,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 $_SESSION['user_id']  = $user['user_id'];
                 $_SESSION['username'] = $user['username'];
                 $_SESSION['usertype'] = $user['usertype'];
-                header("Location: index.php");
-                exit();
+ 
+                header("Location: dashboard.php");
+                    exit();
             } else {
                 $error = "Invalid username or password.";
             }
@@ -89,7 +91,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         }
         @keyframes drift1 { from{transform:translate(0,0)} to{transform:translate(60px,40px)} }
         @keyframes drift2 { from{transform:translate(0,0)} to{transform:translate(-40px,-30px)} }
-
+ 
         .page-wrapper {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -106,8 +108,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             from { opacity:0; transform:translateY(30px); }
             to   { opacity:1; transform:translateY(0); }
         }
-
-        /* Left panel */
+ 
         .brand-panel {
             background: linear-gradient(145deg, #1a1f2e 0%, #0f1118 100%);
             padding: 48px 40px;
@@ -145,8 +146,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         .brand-dots { display:flex; gap:6px; }
         .brand-dots span { width:6px; height:6px; border-radius:50%; background:var(--border); }
         .brand-dots span:first-child { background:var(--accent); }
-
-        /* Right panel */
+ 
         .form-panel {
             padding: 48px 40px;
             display: flex;
@@ -159,14 +159,14 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             font-size:1.75rem; color:var(--text); margin-bottom:6px;
         }
         .form-header p { font-size:0.875rem; color:var(--muted); }
-
+ 
         .error-box {
             background:rgba(224,85,85,0.12);
             border:1px solid rgba(224,85,85,0.3);
             border-radius:8px; padding:12px 16px;
             font-size:0.875rem; color:var(--error);
         }
-
+ 
         .field { display:flex; flex-direction:column; gap:8px; }
         .field label {
             font-size:0.8rem; font-weight:500;
@@ -211,7 +211,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         .btn-login:hover { background:var(--accent2); }
         .btn-login:active { transform:scale(0.99); }
         .fields { display:flex; flex-direction:column; gap:20px; }
-
+ 
         @media (max-width:640px) {
             .page-wrapper { grid-template-columns:1fr; }
             .brand-panel { display:none; }
@@ -231,17 +231,17 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         </div>
         <div class="brand-dots"><span></span><span></span><span></span></div>
     </div>
-
+ 
     <div class="form-panel">
         <div class="form-header">
             <h1>Welcome back</h1>
             <p>Sign in to your account</p>
         </div>
-
+ 
         <?php if (!empty($error)): ?>
         <div class="error-box">⚠ <?= htmlspecialchars($error) ?></div>
         <?php endif; ?>
-
+ 
         <form method="POST" action="login.php" novalidate>
             <div class="fields">
                 <div class="field">
@@ -254,7 +254,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                                autocomplete="username" required>
                     </div>
                 </div>
-
+ 
                 <div class="field">
                     <label for="password">Password</label>
                     <div class="input-wrap">
@@ -265,11 +265,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                         <button type="button" class="show-pw" onclick="togglePw()">Show</button>
                     </div>
                 </div>
-
+ 
                 <div class="form-links">
                     <a href="forgot_password.php">Forgot password or username?</a>
                 </div>
-
+ 
                 <button type="submit" class="btn-login">Sign In</button>
             </div>
         </form>
