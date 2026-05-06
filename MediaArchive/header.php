@@ -7,11 +7,18 @@ if (session_status() === PHP_SESSION_NONE) {
 <nav class="navbar navbar-expand-sm bg-dark navbar-dark">
     <div class="container-fluid">
 
-        <!-- Logo / Title -->
-        <a class="navbar-brand" href="index.php">Media Database</a>
+        <!-- Logo / Site Name -->
+        <a class="navbar-brand" href="index.php">
+            Media Archive
+        </a>
 
         <!-- Mobile Toggle -->
-        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNavbar">
+        <button
+            class="navbar-toggler"
+            type="button"
+            data-bs-toggle="collapse"
+            data-bs-target="#mainNavbar"
+        >
             <span class="navbar-toggler-icon"></span>
         </button>
 
@@ -21,30 +28,44 @@ if (session_status() === PHP_SESSION_NONE) {
             <ul class="navbar-nav me-auto">
 
                 <li class="nav-item">
-                    <a class="nav-link" href="index.php">Home</a>
+                    <a class="nav-link" href="index.php">
+                        Home
+                    </a>
                 </li>
 
                 <li class="nav-item">
-                    <a class="nav-link" href="media.php">Media</a>
+                    <a class="nav-link" href="media.php">
+                        Media
+                    </a>
                 </li>
 
                 <li class="nav-item">
-                    <a class="nav-link" href="media.php?category=books">Books</a>
+                    <a class="nav-link" href="media.php?category=books">
+                        Books
+                    </a>
                 </li>
 
                 <li class="nav-item">
-                    <a class="nav-link" href="media.php?category=movies">Movies</a>
+                    <a class="nav-link" href="media.php?category=movies">
+                        Movies
+                    </a>
                 </li>
 
                 <li class="nav-item">
-                    <a class="nav-link" href="media.php?category=games">Video Games</a>
+                    <a class="nav-link" href="media.php?category=games">
+                        Video Games
+                    </a>
                 </li>
 
-                <!-- Logged-in only: Submit Media -->
+                <!-- Logged-in users -->
                 <?php if (isset($_SESSION['user_id'])): ?>
+
                     <li class="nav-item">
-                        <a class="nav-link" href="submit_media.php">Submit Media</a>
+                        <a class="nav-link" href="submit_media.php">
+                            Submit Media
+                        </a>
                     </li>
+
                 <?php endif; ?>
 
             </ul>
@@ -54,16 +75,20 @@ if (session_status() === PHP_SESSION_NONE) {
 
                 <?php if (isset($_SESSION['user_id'])): ?>
 
-                    <!-- Logged-in user info -->
+                    <!-- Logged in user -->
                     <li class="nav-item">
                         <span class="nav-link">
-                            Logged in as <?php echo htmlspecialchars($_SESSION['username']); ?>
+                            Logged in as
+                            <?php echo htmlspecialchars($_SESSION['username']); ?>
                         </span>
                     </li>
 
-                    <!-- View Profile (ALL users including admins) -->
+                    <!-- View Profile -->
                     <li class="nav-item">
-                        <a class="nav-link" href="view_profile.php?id=<?php echo urlencode($_SESSION['user_id']); ?>">
+                        <a
+                            class="nav-link"
+                            href="view_profile.php?id=<?php echo urlencode($_SESSION['user_id']); ?>"
+                        >
                             View Profile
                         </a>
                     </li>
@@ -75,8 +100,26 @@ if (session_status() === PHP_SESSION_NONE) {
                         </a>
                     </li>
 
-                    <!-- Admin-only link -->
-                    <?php if (isset($_SESSION['usertype']) && $_SESSION['usertype'] === 'admin'): ?>
+                    <!-- Members Page -->
+                    <?php if (
+                        isset($_SESSION['usertype']) &&
+                        (
+                            $_SESSION['usertype'] === 'admin' ||
+                            $_SESSION['usertype'] === 'moderator'
+                        )
+                    ): ?>
+                        <li class="nav-item">
+                            <a class="nav-link" href="members.php">
+                                View Members
+                            </a>
+                        </li>
+                    <?php endif; ?>
+
+                    <!-- Admin Dashboard -->
+                    <?php if (
+                        isset($_SESSION['usertype']) &&
+                        $_SESSION['usertype'] === 'admin'
+                    ): ?>
                         <li class="nav-item">
                             <a class="nav-link" href="admin_dashboard.php">
                                 Admin Page
@@ -93,7 +136,7 @@ if (session_status() === PHP_SESSION_NONE) {
 
                 <?php else: ?>
 
-                    <!-- Guest links -->
+                    <!-- Guests -->
                     <li class="nav-item">
                         <a class="nav-link" href="login.php">
                             Login

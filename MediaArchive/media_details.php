@@ -7,7 +7,16 @@ if (!isset($_GET['id']) || !is_numeric($_GET['id'])) {
 }
 
 $pageId = (int) $_GET['id'];
-$isAdmin = isset($_SESSION['user_id']) && isset($_SESSION['usertype']) && $_SESSION['usertype'] === 'admin';
+
+$isAdmin = isset($_SESSION['user_id']) &&
+           isset($_SESSION['usertype']) &&
+           $_SESSION['usertype'] === 'admin';
+
+$isModerator = isset($_SESSION['user_id']) &&
+               isset($_SESSION['usertype']) &&
+               $_SESSION['usertype'] === 'moderator';
+
+$canModerateComments = $isAdmin || $isModerator;
 
 $message = "";
 $error = "";
@@ -43,6 +52,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_comment'])) {
 }
 
 /*
+    COMMENT DELETE HANDLER
+*/
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_comment_id']) && $canModerateComments) {
+    $deleteId = (int) $_POST['delete_comment_id'];
+
+    $stmt = $conn->prepare("
+        DELETE FROM comments
+        WHERE Comment_ID = ? AND Page_ID = ?
+    ");
+    $stmt->bind_param("ii", $deleteId, $pageId);
+
+    if ($stmt->execute()) {
+        if ($stmt->affected_rows === 1) {
+            $message = "Comment deleted successfully.";
+        } else {
+            $error = "Comment could not be deleted.";
+        }
+    } else {
+        $error = "Failed to delete comment.";
+    }
+
+    $stmt->close();
+}
+
+/*
     ADMIN TEXT UPDATE HANDLER
 */
 if (
@@ -50,7 +84,8 @@ if (
     $isAdmin &&
     !isset($_POST['upload_image']) &&
     !isset($_POST['remove_image_id']) &&
-    !isset($_POST['submit_comment'])
+    !isset($_POST['submit_comment']) &&
+    !isset($_POST['delete_comment_id'])
 ) {
     $newMediaName = trim($_POST['media_name'] ?? '');
     $newMediaDesc = trim($_POST['media_desc'] ?? '');
@@ -424,19 +459,38 @@ $stmt->close();
         <?php if (!empty($comments)): ?>
             <?php foreach ($comments as $comment): ?>
                 <div class="comment-box mb-3">
-                    <div class="d-flex justify-content-between flex-wrap">
-                        <strong>
-                            <a
-                                class="text-light"
-                                href="view_profile.php?id=<?php echo urlencode($comment['user_id']); ?>"
-                            >
-                                <?php echo htmlspecialchars($comment['username']); ?>
-                            </a>
-                        </strong>
+                    <div class="d-flex justify-content-between flex-wrap gap-2">
+                        <div>
+                            <strong>
+                                <a
+                                    class="text-light"
+                                    href="view_profile.php?id=<?php echo urlencode($comment['user_id']); ?>"
+                                >
+                                    <?php echo htmlspecialchars($comment['username']); ?>
+                                </a>
+                            </strong>
 
-                        <span class="text-secondary">
-                            <?php echo htmlspecialchars($comment['created_at']); ?>
-                        </span>
+                            <span class="text-secondary ms-2">
+                                <?php echo htmlspecialchars($comment['created_at']); ?>
+                            </span>
+                        </div>
+
+                        <?php if ($canModerateComments): ?>
+                            <form
+                                method="post"
+                                class="m-0"
+                                onsubmit="return confirm('Delete this comment? This cannot be undone.');"
+                            >
+                                <input
+                                    type="hidden"
+                                    name="delete_comment_id"
+                                    value="<?php echo htmlspecialchars($comment['Comment_ID']); ?>"
+                                >
+                                <button type="submit" class="btn btn-danger btn-sm">
+                                    Delete
+                                </button>
+                            </form>
+                        <?php endif; ?>
                     </div>
 
                     <p class="mb-0 mt-2">
