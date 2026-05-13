@@ -51,9 +51,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_comment'])) {
     }
 }
 
-/*
-    COMMENT DELETE HANDLER
-*/
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_comment_id']) && $canModerateComments) {
     $deleteId = (int) $_POST['delete_comment_id'];
 
@@ -76,9 +73,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_comment_id']) 
     $stmt->close();
 }
 
-/*
-    ADMIN TEXT UPDATE HANDLER
-*/
 if (
     $_SERVER['REQUEST_METHOD'] === 'POST' &&
     $isAdmin &&
@@ -130,9 +124,6 @@ if (
     }
 }
 
-/*
-    ADMIN IMAGE UPLOAD HANDLER
-*/
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $isAdmin && isset($_POST['upload_image'])) {
     if (isset($_FILES['media_image']) && $_FILES['media_image']['error'] === UPLOAD_ERR_OK) {
         $allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
@@ -176,9 +167,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $isAdmin && isset($_POST['upload_im
     }
 }
 
-/*
-    ADMIN IMAGE REMOVE HANDLER
-*/
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $isAdmin && isset($_POST['remove_image_id'])) {
     $imageId = (int) $_POST['remove_image_id'];
 
@@ -218,9 +206,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $isAdmin && isset($_POST['remove_im
     }
 }
 
-/*
-    LOAD MEDIA PAGE DATA
-*/
 $stmt = $conn->prepare("
     SELECT media_page.Page_ID, media_page.Sub_ID, media_page.MediaDesc, submission.MediaName
     FROM media_page
@@ -237,9 +222,6 @@ if (!$media) {
     die("Media page not found.");
 }
 
-/*
-    LOAD IMAGES
-*/
 $images = [];
 
 $stmt = $conn->prepare("
@@ -258,9 +240,6 @@ while ($row = $result->fetch_assoc()) {
 
 $stmt->close();
 
-/*
-    LOAD COMMENTS
-*/
 $comments = [];
 
 $stmt = $conn->prepare("

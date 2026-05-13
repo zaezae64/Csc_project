@@ -8,7 +8,6 @@ if (!isset($_GET['id']) || !is_numeric($_GET['id'])) {
 
 $profileUserId = (int) $_GET['id'];
 
-/* Load user */
 $stmt = $conn->prepare("
     SELECT user_id, username, usertype, profile_image, bio
     FROM user
@@ -24,7 +23,6 @@ if (!$profileUser) {
     die("Profile not found.");
 }
 
-/* FIX: Accepted submission count */
 $stmt = $conn->prepare("
     SELECT COUNT(*) AS accepted_count
     FROM submission
@@ -37,7 +35,6 @@ $row = $result->fetch_assoc();
 $acceptedCount = $row['accepted_count'] ?? 0;
 $stmt->close();
 
-/* Load submissions */
 $stmt = $conn->prepare("
     SELECT Sub_ID, MediaName, AcceptStatus
     FROM submission

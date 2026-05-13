@@ -7,12 +7,10 @@ if (session_status() === PHP_SESSION_NONE) {
 <nav class="navbar navbar-expand-sm bg-dark navbar-dark">
     <div class="container-fluid">
 
-        <!-- Logo / Site Name -->
         <a class="navbar-brand" href="index.php">
             Media Archive
         </a>
 
-        <!-- Mobile Toggle -->
         <button
             class="navbar-toggler"
             type="button"
@@ -24,7 +22,6 @@ if (session_status() === PHP_SESSION_NONE) {
 
         <div class="collapse navbar-collapse" id="mainNavbar">
 
-            <!-- LEFT SIDE NAV -->
             <ul class="navbar-nav me-auto">
 
                 <li class="nav-item">
@@ -39,25 +36,7 @@ if (session_status() === PHP_SESSION_NONE) {
                     </a>
                 </li>
 
-                <li class="nav-item">
-                    <a class="nav-link" href="media.php?category=books">
-                        Books
-                    </a>
-                </li>
 
-                <li class="nav-item">
-                    <a class="nav-link" href="media.php?category=movies">
-                        Movies
-                    </a>
-                </li>
-
-                <li class="nav-item">
-                    <a class="nav-link" href="media.php?category=games">
-                        Video Games
-                    </a>
-                </li>
-
-                <!-- Logged-in users -->
                 <?php if (isset($_SESSION['user_id'])): ?>
 
                     <li class="nav-item">
@@ -70,12 +49,10 @@ if (session_status() === PHP_SESSION_NONE) {
 
             </ul>
 
-            <!-- RIGHT SIDE NAV -->
             <ul class="navbar-nav ms-auto">
 
                 <?php if (isset($_SESSION['user_id'])): ?>
 
-                    <!-- Logged in user -->
                     <li class="nav-item">
                         <span class="nav-link">
                             Logged in as
@@ -83,7 +60,6 @@ if (session_status() === PHP_SESSION_NONE) {
                         </span>
                     </li>
 
-                    <!-- View Profile -->
                     <li class="nav-item">
                         <a
                             class="nav-link"
@@ -93,14 +69,12 @@ if (session_status() === PHP_SESSION_NONE) {
                         </a>
                     </li>
 
-                    <!-- Edit Profile -->
                     <li class="nav-item">
                         <a class="nav-link" href="profile.php">
                             Edit Profile
                         </a>
                     </li>
 
-                    <!-- Members Page -->
                     <?php if (
                         isset($_SESSION['usertype']) &&
                         (
@@ -115,7 +89,6 @@ if (session_status() === PHP_SESSION_NONE) {
                         </li>
                     <?php endif; ?>
 
-                    <!-- Admin Dashboard -->
                     <?php if (
                         isset($_SESSION['usertype']) &&
                         $_SESSION['usertype'] === 'admin'
@@ -127,7 +100,6 @@ if (session_status() === PHP_SESSION_NONE) {
                         </li>
                     <?php endif; ?>
 
-                    <!-- Logout -->
                     <li class="nav-item">
                         <a class="nav-link" href="logout.php">
                             Logout
@@ -136,7 +108,6 @@ if (session_status() === PHP_SESSION_NONE) {
 
                 <?php else: ?>
 
-                    <!-- Guests -->
                     <li class="nav-item">
                         <a class="nav-link" href="login.php">
                             Login
