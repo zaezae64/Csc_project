@@ -2,14 +2,6 @@
 session_start();
 require_once 'DBConnect.php';
 
-/*
-    Current schema:
-    - media_page.Page_ID, media_page.Sub_ID, media_page.MediaDesc
-    - submission.Sub_ID, submission.MediaName
-
-    So we join media_page to submission on Sub_ID.
-*/
-
 $result = $conn->query("
     SELECT media_page.Page_ID, media_page.MediaDesc, submission.MediaName
     FROM media_page

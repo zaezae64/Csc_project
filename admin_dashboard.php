@@ -20,7 +20,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['approve_sub_id'])) {
     $stmt->close();
 }
 
-/* Load submissions */
+
 $result = $conn->query("
     SELECT Sub_ID, MediaName, User_ID, AcceptStatus
     FROM submission

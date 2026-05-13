@@ -2,23 +2,7 @@
 session_start();
 require_once 'DBConnect.php';
 
-/*
-    Current schema notes:
-    - media_page stores Page_ID, Sub_ID, MediaDesc
-    - submission stores Sub_ID, MediaName, User_ID, AcceptStatus
-
-    So to show media pages, we join media_page to submission on Sub_ID.
-*/
-
 $selectedCategory = isset($_GET['category']) ? strtolower(trim($_GET['category'])) : 'all';
-
-/*
-    Since your current schema does not clearly show a category column
-    on media_page/submission, this page loads all media from the DB.
-    The category buttons remain for UI consistency, but filtering is
-    only meaningful if you later add category support to the DB.
-*/
-
 $sql = "
     SELECT media_page.Page_ID, media_page.MediaDesc, submission.MediaName
     FROM media_page
