@@ -1,9 +1,9 @@
 <?php
 session_start();
+require_once 'DBConnect.php';
 
-// Redirect if already logged in
 if (isset($_SESSION['user_id'])) {
-    header("Location: dashboard.php");
+    header("Location: index.php");
     exit();
 }
 
@@ -14,9 +14,10 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $username = trim($_POST['username'] ?? '');
     $password = $_POST['password'] ?? '';
     $confirm  = $_POST['confirm_password'] ?? '';
-    $hint     = trim($_POST['password_hint'] ?? '');
+    $hint_question = trim($_POST['hint_question'] ?? '');
+    $hint_answer   = trim($_POST['hint_answer'] ?? '');
 
-    if ($username === "" || $password === "" || $confirm === "") {
+    if ($username === "" || $password === "" || $confirm === "" || $hint_question === "" || $hint_answer === "") {
         $error = "Please fill in all required fields.";
     } elseif (strlen($username) < 3) {
         $error = "Username must be at least 3 characters.";
@@ -25,43 +26,48 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     } elseif ($password !== $confirm) {
         $error = "Passwords do not match.";
     } else {
-        $conn = new mysqli("localhost", "root", "", "csc_project");
 
-        if ($conn->connect_error) {
-            $error = "Database connection failed.";
+        $stmt = $conn->prepare("SELECT user_id FROM user WHERE username = ?");
+        $stmt->bind_param("s", $username);
+        $stmt->execute();
+        $stmt->store_result();
+
+        if ($stmt->num_rows > 0) {
+            $error = "That username is already taken. Please choose another.";
         } else {
-            $stmt = $conn->prepare("SELECT user_id FROM user WHERE username = ?");
-            $stmt->bind_param("s", $username);
-            $stmt->execute();
-            $stmt->store_result();
-
-            if ($stmt->num_rows > 0) {
-                $error = "That username is already taken. Please choose another.";
-            } else {
-                $stmt->close();
-
-                $hashed   = password_hash($password, PASSWORD_DEFAULT);
-                $usertype = "standard";
-                $status   = "active";
-                $flair    = "";
-
-                $stmt = $conn->prepare(
-                    "INSERT INTO user (username, usertype, account_status, FlairTags, password_hash, hint_question)
-                     VALUES (?, ?, ?, ?, ?, ?)"
-                );
-                $stmt->bind_param("ssssss", $username, $usertype, $status, $flair, $hashed, $hint);
-                $stmt->execute();
-
-                if ($stmt->affected_rows === 1) {
-                    $success = "Account created! You can now log in.";
-                } else {
-                    $error = "Could not create account. Please try again.";
-                }
-            }
-
             $stmt->close();
-            $conn->close();
+
+            $hashed   = password_hash($password, PASSWORD_DEFAULT);
+            $usertype = "standard";
+            $status   = "active";
+            $flair    = "";
+
+            $stmt = $conn->prepare(
+                "INSERT INTO user (username, usertype, account_status, FlairTags, password_hash, hint_question, hint_answer)
+                 VALUES (?, ?, ?, ?, ?, ?, ?)"
+            );
+
+            $stmt->bind_param(
+                "sssssss",
+                $username,
+                $usertype,
+                $status,
+                $flair,
+                $hashed,
+                $hint_question,
+                $hint_answer
+            );
+
+            $stmt->execute();
+
+            if ($stmt->affected_rows === 1) {
+                $success = "Account created successfully! You can now log in.";
+            } else {
+                $error = "Could not create account. Please try again.";
+            }
         }
+
+        $stmt->close();
     }
 }
 ?>
@@ -69,91 +75,157 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <title>Sign Up - Media Archive</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sign Up – Media Archive</title>
-    <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: #1a1a2e;
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        .card {
-            background: #16213e;
-            border-radius: 12px;
-            padding: 40px 36px;
-            width: 100%;
-            max-width: 420px;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.4);
-            border: 1px solid #0f3460;
-        }
-        .logo { text-align: center; margin-bottom: 28px; }
-        .logo h1 { color: #e94560; font-size: 26px; letter-spacing: 1px; }
-        .logo p { color: #a8a8b3; font-size: 13px; margin-top: 4px; }
-        label { display: block; color: #a8a8b3; font-size: 13px; margin-bottom: 6px; margin-top: 18px; }
-        input[type="text"], input[type="password"] {
-            width: 100%; padding: 11px 14px; border-radius: 8px;
-            border: 1px solid #0f3460; background: #1a1a2e;
-            color: #eaeaea; font-size: 15px; transition: border-color 0.2s;
-        }
-        input:focus { outline: none; border-color: #e94560; }
-        .helper { color: #6b6b80; font-size: 12px; margin-top: 5px; }
-        .alert { border-radius: 8px; padding: 10px 14px; font-size: 13px; margin-top: 16px; }
-        .alert.error { background: rgba(233,69,96,0.15); border: 1px solid #e94560; color: #e94560; }
-        .alert.success { background: rgba(39,174,96,0.15); border: 1px solid #27ae60; color: #27ae60; }
-        .btn { width: 100%; padding: 12px; margin-top: 26px; background: #e94560; color: #fff; border: none; border-radius: 8px; font-size: 15px; font-weight: 600; cursor: pointer; transition: background 0.2s; }
-        .btn:hover { background: #c73652; }
-        .links { margin-top: 20px; text-align: center; font-size: 13px; }
-        .links a { color: #a8a8b3; text-decoration: none; transition: color 0.2s; }
-        .links a:hover { color: #e94560; }
-    </style>
+
+    <link rel="stylesheet" href="https://www.w3schools.com/w3css/5/w3.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="mystyles.css">
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </head>
 <body>
-<div class="card">
-    <div class="logo">
-        <h1>Media Archive</h1>
-        <p>Create an account</p>
+
+<main class="container mt-5" style="max-width: 650px;">
+
+    <div class="oc-callout w3-card-4">
+
+        <h1 class="h3 mb-3 text-center">Create Account</h1>
+
+        <p class="text-center mb-4">
+            Join the Media Archive community.
+        </p>
+
+        <?php if ($error !== ""): ?>
+            <div class="alert alert-danger">
+                <?php echo htmlspecialchars($error); ?>
+            </div>
+        <?php endif; ?>
+
+        <?php if ($success !== ""): ?>
+            <div class="alert alert-success">
+                <?php echo htmlspecialchars($success); ?>
+            </div>
+        <?php endif; ?>
+
+        <?php if ($success === ""): ?>
+
+        <form method="POST" action="signup.php">
+
+            <div class="mb-3">
+                <label for="username" class="form-label">
+                    Username
+                </label>
+
+                <input
+                    type="text"
+                    id="username"
+                    name="username"
+                    class="form-control"
+                    value="<?php echo htmlspecialchars($_POST['username'] ?? ''); ?>"
+                    placeholder="Choose a username"
+                    maxlength="50"
+                    required
+                >
+            </div>
+
+            <div class="row">
+
+                <div class="col-md-6 mb-3">
+                    <label for="password" class="form-label">
+                        Password
+                    </label>
+
+                    <input
+                        type="password"
+                        id="password"
+                        name="password"
+                        class="form-control"
+                        placeholder="Minimum 6 characters"
+                        required
+                    >
+                </div>
+
+                <div class="col-md-6 mb-3">
+                    <label for="confirm_password" class="form-label">
+                        Confirm Password
+                    </label>
+
+                    <input
+                        type="password"
+                        id="confirm_password"
+                        name="confirm_password"
+                        class="form-control"
+                        placeholder="Re-enter password"
+                        required
+                    >
+                </div>
+
+            </div>
+
+            <hr class="my-4">
+
+            <h2 class="h5 mb-3">Account Recovery</h2>
+
+            <div class="mb-3">
+                <label for="hint_question" class="form-label">
+                    Password Hint Question
+                </label>
+
+                <input
+                    type="text"
+                    id="hint_question"
+                    name="hint_question"
+                    class="form-control"
+                    value="<?php echo htmlspecialchars($_POST['hint_question'] ?? ''); ?>"
+                    placeholder="Example: What was the name of your first pet?"
+                    maxlength="255"
+                    required
+                >
+            </div>
+
+            <div class="mb-3">
+                <label for="hint_answer" class="form-label">
+                    Password Hint Answer
+                </label>
+
+                <input
+                    type="text"
+                    id="hint_answer"
+                    name="hint_answer"
+                    class="form-control"
+                    value="<?php echo htmlspecialchars($_POST['hint_answer'] ?? ''); ?>"
+                    placeholder="Enter your answer"
+                    maxlength="255"
+                    required
+                >
+
+                <div class="form-text text-light">
+                    This helps recover your account. Do not enter your actual password.
+                </div>
+            </div>
+
+            <button type="submit" class="btn btn-warning w-100 mt-3">
+                Create Account
+            </button>
+
+        </form>
+
+        <?php endif; ?>
+
+        <hr>
+
+        <p class="text-center mb-0">
+            Already have an account?
+            <a href="login.php" class="text-light">
+                Sign in here
+            </a>
+        </p>
+
     </div>
 
-    <?php if ($error !== ""): ?>
-        <div class="alert error"><?= htmlspecialchars($error) ?></div>
-    <?php endif; ?>
+</main>
 
-    <?php if ($success !== ""): ?>
-        <div class="alert success"><?= htmlspecialchars($success) ?></div>
-    <?php endif; ?>
-
-    <?php if ($success === ""): ?>
-    <form method="POST" action="signup.php">
-        <label for="username">Username <span style="color:#e94560">*</span></label>
-        <input type="text" id="username" name="username"
-               value="<?= htmlspecialchars($_POST['username'] ?? '') ?>"
-               placeholder="Choose a username" maxlength="50" required>
-
-        <label for="password">Password <span style="color:#e94560">*</span></label>
-        <input type="password" id="password" name="password"
-               placeholder="Min. 6 characters" required>
-
-        <label for="confirm_password">Confirm Password <span style="color:#e94560">*</span></label>
-        <input type="password" id="confirm_password" name="confirm_password"
-               placeholder="Re-enter your password" required>
-
-        <label for="password_hint">Password Hint <span style="color:#6b6b80">(optional)</span></label>
-        <input type="text" id="password_hint" name="password_hint"
-               value="<?= htmlspecialchars($_POST['password_hint'] ?? '') ?>"
-               placeholder="e.g. My childhood pet's name" maxlength="100">
-        <div class="helper">This helps you recover your account. Don't write your actual password.</div>
-
-        <button type="submit" class="btn">Create Account</button>
-    </form>
-    <?php endif; ?>
-
-    <div class="links" style="margin-top: 24px;">
-        <a href="login.php">← Already have an account? Sign in</a>
-    </div>
-</div>
 </body>
 </html>
